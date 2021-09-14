@@ -81,7 +81,7 @@ class Calient(object):
             return links
 
 
-class calient_rest(app_manager.RyuApp):
+class CalientREST(app_manager.RyuApp):
 
     _EVENTS =  [Custom_event.SetupCRSEvent,
                 Custom_event.SetupCRSReplyEvent,
@@ -98,7 +98,7 @@ class calient_rest(app_manager.RyuApp):
         super(calient_rest,self).__init__(*args,**kwargs)
 
     @set_ev_cls(Custom_event.SetupCRSEvent)
-    def _SetupCRS(self,ev):
+    def setup_crs(self,ev):
         ev_reply = Custom_event.SetupCRSReplyEvent()
         ev_reply.crs = ev.crs
         calient = Calient()
@@ -120,7 +120,7 @@ class calient_rest(app_manager.RyuApp):
         self.send_event('Intra_domain_***',ev_reply)
 
     @set_ev_cls(Custom_event.TeardownCRSEvent)
-    def _TeardownCRS(self,ev):
+    def teardown_crs(self,ev):
         ev_reply = Custom_event.TeardownCRSReplyEvent()
         ev_reply.crs = ev.crs
         calient = Calient()
@@ -135,7 +135,7 @@ class calient_rest(app_manager.RyuApp):
         self.send_event('Intra_domain_***',ev_reply)
 
     @set_ev_cls(Custom_event.GetTopoCRSEvent)
-    def _GetTopo(self,ev):
+    def get_topo(self,ev):
         ev_reply = Custom_event.GetTopoCRSReplyEvent()
         calient = Calient()
         links = calient.get_crs()
@@ -147,28 +147,31 @@ class calient_rest(app_manager.RyuApp):
         self.send_event('Intra_domain_***',ev_reply)
 
         if links:
-            conn = psycopg2.connect(database='***', user='***', password='***', host='***')
-            cursor = conn.cursor()
-            query_truncate = '''TRUNCATE TABLE s320_***;'''
-            cursor.execute(query_truncate)
-            for link in links:
-                p_a = re.split('(-|>)', link)[0]
-                _dir = re.split('(-|>)', link)[1]
-                p_b = re.split('(-|>)', link)[2]
-                query = '''
-                        INSERT into
-                            s320_***
-                            (Port_A, Port_B, direction)
-                        VALUES
-                            ('{}','{}','{}')
-                        '''.format(p_a, p_b, _dir)
-                cursor.execute(query)
-                query_clean = '''
-                    DELETE FROM s320_*** a using s320_*** b
-                    WHERE a.ctid < b.ctid
-                    AND a.Port_A = b.Port_A
-                    AND A.Port_B = b.Port_b
-                    '''
-                cursor.execute(query_clean)
-            conn.commit()
-            conn.close()
+            try:
+                conn = psycopg2.connect(database='***', user='***', password='***', host='***')
+                cursor = conn.cursor()
+                query_truncate = '''TRUNCATE TABLE s320_***;'''
+                cursor.execute(query_truncate)
+                for link in links:
+                    p_a = re.split('(-|>)', link)[0]
+                    _dir = re.split('(-|>)', link)[1]
+                    p_b = re.split('(-|>)', link)[2]
+                    query = '''
+                            INSERT into
+                                s320_***
+                                (Port_A, Port_B, direction)
+                            VALUES
+                                ('{}','{}','{}')
+                            '''.format(p_a, p_b, _dir)
+                    cursor.execute(query)
+                    query_clean = '''
+                        DELETE FROM s320_*** a using s320_*** b
+                        WHERE a.ctid < b.ctid
+                        AND a.Port_A = b.Port_A
+                        AND A.Port_B = b.Port_b
+                        '''
+                    cursor.execute(query_clean)
+                conn.commit()
+                conn.close()
+            except Exception as e:
+                print(e)
